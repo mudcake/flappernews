@@ -68,12 +68,19 @@ router.get('/posts/:post/comments', function(req, res, next) {
 });
 
 router.post('/posts/:post/comments', function(req, res, next) {
+  console.log(req.body);
   var comment = new Comment(req.body);
+
+  console.log("2 " + comment);
   comment.post = req.body;
+  console.log("hehehe");
+  console.log(req.post);
 
   comment.save(function(err, comment){
-    if(err){ return next(err); }
+    console.log("comon");
+    if(err){ console.log(err); return next(err); }
 
+    console.log('blah');
     req.post.comments.push(comment);
     req.post.save(function(err, post) {
       if(err){ return next(err); }
