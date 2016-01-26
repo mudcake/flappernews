@@ -1,20 +1,32 @@
 var app = angular.module('flapperNews', ['ui.router']);
 
-app.factory('posts', [function(){
+app.factory('posts', ['$http', function($http){
     //service body
     var o = {
       posts: [
-        {
-          title: 'First Title',
-          link: 'First Link',
-          upvotes: 0,
-          comments: [
-            {author: 'joe', body: 'Cool post', upvotes: 0},
-            {author: 'bob', body: 'Nice!', upvotes: 0}
-          ]
-        }
+
       ]
     };
+
+    o.getAll = function() {
+      return $http.get('/posts').success(function(data){
+        angular.copy(data, o.posts);
+      });
+    };
+
+    o.create = function(post) {
+      return $http.post('/posts', post).success(function(data){
+        o.posts.push(data);
+      });
+    };
+
+    o.upvote = function(post) {
+      return $http.put('/posts/' + post._id + '/upvote')
+        .success(function(data) {
+          post.upvotes += 1;
+        });
+    };
+
     return o;
 }]);
 
@@ -28,7 +40,12 @@ function($stateProvider, $urlRouterProvider) {
     .state('home', {
       url: '/home',
       templateUrl: '/views/home.html',
-      controller: 'MainCtrl'
+      controller: 'MainCtrl' /*,
+      resolve: {
+        postpromise: ['posts', function(posts) {
+          return posts.getAll();
+        }]
+      } */
     })
 
     .state('posts', {
@@ -50,28 +67,24 @@ function($stateProvider, $urlRouterProvider) {
 app.controller('MainCtrl', [
     '$scope',
     'posts',
-    function($scope, posts) {
+    '$http',
+    function($scope, posts, $http) {
       $scope.test = 'Hello World!';
 
-      $scope.posts = posts.posts;
+      $scope.posts = posts.getAll();
 
       $scope.addPost = function() {
         if (!$scope.title || $scope.title === '') { return; }
-        $scope.posts.push({
+        posts.create({
           title: $scope.title,
-          link: $scope.link,
-          upvotes: 0,
-          comments: [
-            {author: 'joe', body: 'Cool post', upvotes: 0},
-            {author: 'bob', body: 'idiot', upvotes: 1}
-          ]
+          link: $scope.link
         });
         $scope.title = '';
         $scope.link = '';
       };
 
       $scope.incrementUpvotes = function(post) {
-        post.upvotes += 1;
+        posts.upvote(post);
       };
     }
 ]);

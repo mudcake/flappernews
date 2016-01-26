@@ -30,6 +30,7 @@ router.post('/posts', function(req, res, next) {
 router.param('post', function(req, res, next, id) {
   var query = Post.findById(id);
 
+  console.log("query" + query);
   query.exec(function (err, post) {
     if (err) { return next(err); }
     if (!post) { return next(new Error('can\'t find post')); }
@@ -40,7 +41,11 @@ router.param('post', function(req, res, next, id) {
 });
 
 router.get('/posts/:post', function(req, res) {
-  res.json(req.post);
+  req.post.populate('comments', function(err, post) {
+    if(err) { return next(err);}
+
+    res.json(req.post);
+  });
 });
 
 router.put('/posts/:post/upvote', function(req, res, next) {
@@ -63,6 +68,12 @@ router.param('comment', function(req, res, next, id) {
   });
 });
 
+
+
+router.get('/posts/:post/comments/:comment', function(req, res, next) {
+  res.json(req.comment)
+});
+
 router.get('/posts/:post/comments', function(req, res, next) {
   res.json(req.post.comments);
 });
@@ -72,9 +83,10 @@ router.post('/posts/:post/comments', function(req, res, next) {
   var comment = new Comment(req.body);
 
   console.log("2 " + comment);
-  comment.post = req.body;
+  comment.post = req.body.id;
   console.log("hehehe");
   console.log(req.post);
+  console.log(comment.post);
 
   comment.save(function(err, comment){
     console.log("comon");
@@ -90,7 +102,7 @@ router.post('/posts/:post/comments', function(req, res, next) {
   });
 });
 
-router.post('/posts/:post/comments/:comment/upvote', function(req, res, next) {
+router.put('/posts/:post/comments/:comment/upvote', function(req, res, next) {
   req.comment.upvote(function (err, comment) {
     if (err) { return next(err); }
 
