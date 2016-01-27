@@ -1,11 +1,9 @@
 var app = angular.module('flapperNews', ['ui.router']);
 
-app.factory('posts', ['$http', function($http){
+app.factory('postsFactory', ['$http', function($http){
     //service body
     var o = {
-      posts: [
-
-      ]
+      posts: []
     };
 
     o.getAll = function() {
@@ -24,6 +22,23 @@ app.factory('posts', ['$http', function($http){
       return $http.put('/posts/' + post._id + '/upvote')
         .success(function(data) {
           post.upvotes += 1;
+      });
+    };
+
+    o.get = function(id) {
+      return $http.get('/posts/' + id).then(function(res){
+        return res.data;
+      });
+    };
+
+    o.addComment = function(id, comment) {
+      return $http.post('/posts/' + id + '/comments', comment);
+    };
+
+    o.upvoteComment = function(post, comment) {
+      return $http.put('/posts/' + post._id + '/comments/' + comment._id + '/upvote')
+        .success(function(data) {
+          comment.upvotes += 1;
         });
     };
 
@@ -40,18 +55,23 @@ function($stateProvider, $urlRouterProvider) {
     .state('home', {
       url: '/home',
       templateUrl: '/views/home.html',
-      controller: 'MainCtrl' /*,
+      controller: 'MainCtrl',
       resolve: {
-        postpromise: ['posts', function(posts) {
-          return posts.getAll();
-        }]
-      } */
+        postpromise: function(postsFactory) {
+          return postsFactory.getAll();
+        }
+      }
     })
 
     .state('posts', {
       url: '/posts/:id',
       templateUrl: '/views/posts.html',
-      controller: 'PostsCtrl'
+      controller: 'PostsCtrl',
+      resolve: {
+        post: function($stateParams, postsFactory) {
+          return postsFactory.get($stateParams.id);
+        }
+      }
     })
 
     .state('test', {
@@ -66,12 +86,11 @@ function($stateProvider, $urlRouterProvider) {
 // Home
 app.controller('MainCtrl', [
     '$scope',
-    'posts',
-    '$http',
-    function($scope, posts, $http) {
+    'postsFactory',
+    function($scope, postsFactory) {
       $scope.test = 'Hello World!';
 
-      $scope.posts = posts.getAll();
+      $scope.posts = postsFactory.posts;
 
       $scope.addPost = function() {
         if (!$scope.title || $scope.title === '') { return; }
@@ -91,8 +110,8 @@ app.controller('MainCtrl', [
 
 app.controller('TestCtrl', [
   '$scope',
-  'posts',
-  function($scope, posts) {
+  //'posts',
+  function($scope) {
     $scope.test = 'wtf';
   }
 ]);
@@ -101,24 +120,26 @@ app.controller('TestCtrl', [
 app.controller('PostsCtrl', [
   '$scope',
   '$stateParams',
-  'posts',
-  function($scope, $stateParams, posts) {
+  'postsFactory',
+  'post',
+  function($scope, $stateParams, postsFactory, post) {
 
     $scope.test = 'Hello?'
-    $scope.post = posts.posts[$stateParams.id];
+    $scope.post = post;
 
     $scope.addComment = function() {
       if($scope.body === '') { return; }
-      $scope.post.comments.push({
-        author: 'user',
+      postsFactory.addComment(post._id, {
         body: $scope.body,
-        upvotes: 0
+        author: 'user',
+      }).success(function(comment) {
+        $scope.post.comments.push(comment);
       });
       $scope.body = '';
     };
 
     $scope.incrementUpvotes = function(comment) {
-      comment.upvotes += 1;
+      postsFactory.upvoteComment(post, comment);
     };
   }
 ]);
